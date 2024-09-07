@@ -3,75 +3,104 @@ import {
   Button,
   Modal,
   DatePicker,
-  TimePicker,
   message,
   Row,
   Col,
   Space,
+  Select,
 } from "antd";
 //导入scc样式
 import "./App.scss";
 import { useState } from "react";
 // 时间格式调整组件
 import moment, { Moment } from "moment";
+// 导入封装好的 API 函数
+import {
+  makeReservation,
+  getUnavailableDates,
+  getUnavailableTimesForDate,
+} from "./api/reservationApi";
 
+const { Option } = Select;
 const App = () => {
   // 用于控制 Modal 显示状态的状态变量
   const [isModalOpen, setIsModalOpen] = useState(false);
   // 后端给我假数据
-  const unavailableDates = ["10-09-2024", "12-09-2024", "13-09-2024"];
-  //: { [key: string]: string[] }定义一个类型来帮助 TypeScript 识别键的格式
-  const unavailableTimes: { [key: string]: string[] } = {
-    "11-09-2024": ["10:00", "14:00", "15:00"],
-    "12-09-2024": ["09:00", "12:00", "18:00"],
-  };
+  // const unavailableDates = ["10-09-2024", "12-09-2024", "13-09-2024"];
+  // //: { [key: string]: string[] }定义一个类型来帮助 TypeScript 识别键的格式
+  // const unavailableTimes: { [key: string]: string[] } = {
+  //   "11-09-2024": ["10:00", "14:00", "15:00"],
+  //   "12-09-2024": ["09:00", "12:00", "18:00"],
+  // };
   // selectedDate 存储用户信息
   const [selectedDate, setSelectedDate] = useState<Moment | null>(null);
   //状态值disabledTimes 更新状态的函数setDisabledTimes // 用来存储禁用的时间
-  const [disabledTimes, setDisabledTimes] = useState<number[]>([]);
+  // const [disabledTimes, setDisabledTimes] = useState<number[]>([]);
   // 存储用户选中的时间
   const [selectedTime, setSelectedTime] = useState<Moment | null>(null);
+  // 存储可用的时间段
+  const [availableTimes, setAvailableTimes] = useState<string[]>([]);
+  const [unavailableDates, setUnavailableDates] = useState<string[]>([]);
+
   // 点击showClick按钮时触发的函数
   const showClick = () => {
+    // 清除信息
+    setSelectedDate(null);
+    setSelectedTime(null);
     console.log("showClick()");
     // 显示对话框
     setIsModalOpen(true);
+    // 查接口哪些是禁用的
+    getUnavailableDates().then((res: { data: any }) => {
+      console.log(res, "getUnavailableDates");
+      // 假设 res.data 包含不可用日期和时间
+      const { unavailable_dates } = res.data;
+      setUnavailableDates(unavailable_dates); // 存储不可用日期
+    });
   };
 
   // Modal 里面的ok按钮
   const handleOk = () => {
     // 校验
-    if (!selectedDate) {
-      message.warning("Please select a date!");
+    // if (!selectedDate) {
+    //   message.warning("Please select a date!");
+    //   return;
+    // }
+    // if (!selectedTime) {
+    //   message.warning("Please select a time!");
+    //   return;
+    // }
+    if (!selectedDate || !selectedTime) {
+      message.warning("Please select both date and time!");
       return;
     }
-    if (!selectedTime) {
-      message.warning("Please select a time!");
-      return;
-    }
+
     console.log("handleOk");
-    if (selectedTime && selectedDate) {
-      const selectedDateStr = selectedDate.format("DD-MM-YYYY");
-      const selectedTimeStr = selectedTime.format("HH:mm");
-      console.log(
-        `发送给后端的日期和时间: 日期: ${selectedDateStr}, 时间: ${selectedTimeStr}`
-      );
-    }
+    // if (selectedTime && selectedDate) {
+    const selectedDateStr = selectedDate.format("DD-MM-YYYY");
+    const selectedTimeStr = selectedTime.format("HH:mm");
+    console.log(
+      `发送给后端的日期和时间: 日期: ${selectedDateStr}, 时间: ${selectedTimeStr}`
+    );
+    // }
+
+    // 调用封装的 makeReservation 函数
+    makeReservation(selectedDateStr, selectedTimeStr)
+      .then((response: { data: any }) => {
+        const data = response.data;
+        if (data.status === "success") {
+          message.success(data.message);
+        } else {
+          message.error(data.message);
+        }
+      })
+      .catch(() => {
+        message.error("Reservation failed. Please try again.");
+      });
     message.success("Reservation successful!");
     // 清除信息
     setSelectedDate(null);
     setSelectedTime(null);
-    // thissimulateSendRequest(selectedDateStr, selectedTimeStr)
-    //   .then((response) => {
-    //     if (response.status === 200) {
-    //       message.success("预约成功！"); // 显示预约成功提示
-    //     } else {
-    //       message.error("预约失败，请稍后重试。"); // 显示预约失败提示
-    //     }
-    //   })
-    //   .catch(() => {
-    //     message.error("预约失败，请稍后重试。"); // 如果请求失败
-    //   });
     setIsModalOpen(false);
   };
 
@@ -88,6 +117,10 @@ const App = () => {
     if (current && current < moment().endOf("day")) {
       return true;
     }
+    // 确保 `unavailableDates` 正确被赋值并且是数组
+    // if (unavailableDates && Array.isArray(unavailableDates)) {
+    //   return unavailableDates.includes(current.format("DD-MM-YYYY"));
+    // }
     // console.log(
     //   unavailableDates.includes(current.format("DD-MM-YYYY")),
     //   'unavailableDates.includes(current.format("DD-MM-YYYY"));'
@@ -97,47 +130,94 @@ const App = () => {
   };
 
   // 当日期变化时触发
+  // const handleDateChange = (date: Moment | null) => {
+  //   setSelectedDate(date);
+  //   if (date) {
+  //     const selectedDateStr = date.format("DD-MM-YYYY");
+  //     // const unavailable = unavailableTimes[selectedDateStr] || [];
+  //     const unavailable =
+  //       (unavailableTimes && unavailableTimes[selectedDateStr]) || [];
+  //     // 生成所有时间段（8:00, 10:00, 12:00, ..., 20:00）
+  //     const allTimes = [
+  //       "08:00",
+  //       "10:00",
+  //       "12:00",
+  //       "14:00",
+  //       "16:00",
+  //       "18:00",
+  //       "20:00",
+  //     ];
+  //     // 过滤掉不可用的时间
+  //     const available = allTimes.filter((time) => !unavailable.includes(time));
+
+  //     setAvailableTimes(available); // 更新可用时间
+  //   } else {
+  //     setAvailableTimes([]); // 如果没有日期被选中，则清空可用时间
+  //   }
+  // };
   const handleDateChange = (date: Moment | null) => {
-    // 用户选择新日期后更新selectedDate的值
     setSelectedDate(date);
-    console.log("handleDateChange");
+
     if (date) {
       const selectedDateStr = date.format("DD-MM-YYYY");
-      console.log(selectedDateStr, "selectedDateStr 点击选择的日期");
-      console.log(unavailableTimes, "unavailableTimes 后端给传的不可用的时间");
 
-      const unavailable = unavailableTimes[selectedDateStr];
-      if (unavailable) {
-        // 把后端传的不可用的时间段转换成数组然后在页面禁用
-        const hours = unavailable.map((time) => moment(time, "HH:mm").hour());
-        console.log(hours);
-        setDisabledTimes(hours); // 将禁用的时间段存储到状态中
-        // 在这里处理不可用的时间段，例如存储在一个状态中
-        console.log(
-          `该日期 ${selectedDateStr} 的不可用时间段是: `,
-          unavailable
+      // 调用后端 API 获取该日期的不可用时间段
+      getUnavailableTimesForDate(selectedDateStr).then((res: { data: any }) => {
+        const unavailable = res.data.unavailable_times || [];
+
+        // 生成所有时间段（8:00, 10:00, 12:00, ..., 20:00）
+        const allTimes = [
+          "08:00",
+          "10:00",
+          "12:00",
+          "14:00",
+          "16:00",
+          "18:00",
+          "20:00",
+        ];
+
+        // 过滤掉不可用的时间段
+        const available = allTimes.filter(
+          (time) => !unavailable.includes(time)
         );
-      } else {
-        setDisabledTimes([]);
-        console.log(`该日期 ${selectedDateStr} 没有不可用的时间段`);
-      }
+
+        // 更新可用时间段
+        setAvailableTimes(available);
+      });
+    } else {
+      setAvailableTimes([]); // 如果没有选择日期，则清空可用时间
     }
   };
 
   // 禁用已经预定的时间
-  const disabledTime = () => {
-    console.log("disabledTime");
-    return {
-      disabledHours: () => disabledTimes, // 禁用这些时间段
-    };
-  };
+  // const disabledTime = () => {
+  //   // 固定的时间间隔：每隔两小时一个时间段
+  //   const availableSlots = [8, 10, 12, 14, 16, 18, 20];
+
+  //   return {
+  //     disabledHours: () => {
+  //       // 禁用所有不在 availableSlots 里面的时间段
+  //       const allHours = Array.from({ length: 24 }, (_, i) => i); // 生成0到23小时的数组
+  //       const disabledHours = allHours.filter(
+  //         (hour) => !availableSlots.includes(hour)
+  //       );
+
+  //       // 加入已经被预定的时间
+  //       const unavailableHours = availableSlots.filter((hour) =>
+  //         disabledTimes.includes(hour)
+  //       );
+
+  //       // 返回两个数组的并集，禁用这些时间
+  //       return [...disabledHours, ...unavailableHours];
+  //     },
+  //   };
+  // };
 
   // 当时间变化时触发
-  const handleTimeChange = (time: Moment | null) => {
+  const handleTimeChange = (value: string) => {
     console.log("handleTimeChange");
-    // 保存选择的时间 异步更新所以不在控制台直接显示
-    setSelectedTime(time);
-    console.log(time ? time.format("HH:mm") : "无时间", "选择的时间"); // 打印选择的时间
+    setSelectedTime(moment(value, "HH:mm")); // 将字符串时间转换为 Moment 对象
+    console.log(value, "选择的时间");
   };
 
   return (
@@ -180,14 +260,33 @@ const App = () => {
               style={{ width: "100%" }}
               placeholder="Please select date"
             />
-            <TimePicker
-              disabledTime={disabledTime}
-              onChange={handleTimeChange}
-              value={selectedTime}
-              format="HH:mm"
-              style={{ width: "100%" }}
+            <Select
               placeholder="Please select a time"
-            />
+              style={{ width: "100%" }}
+              onChange={handleTimeChange}
+              value={selectedTime ? selectedTime.format("HH:mm") : undefined}
+            >
+              {availableTimes.map((time) => (
+                <Option key={time} value={time}>
+                  {time}
+                </Option>
+              ))}
+            </Select>
+
+            {/* <Select
+              placeholder="Please select a time"
+              style={{ width: "100%" }}
+              onChange={handleTimeChange}
+              value={selectedTime ? selectedTime.format("HH:mm") : undefined}
+            >
+              <Option value="08:00">08:00</Option>
+              <Option value="10:00">10:00</Option>
+              <Option value="12:00">12:00</Option>
+              <Option value="14:00">14:00</Option>
+              <Option value="16:00">16:00</Option>
+              <Option value="18:00">18:00</Option>
+              <Option value="20:00">20:00</Option>
+            </Select> */}
           </Space>
         </Modal>
       </main>
