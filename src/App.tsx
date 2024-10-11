@@ -27,6 +27,7 @@ const App = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   // 后端给我假数据
   // const unavailableDates = ["10-09-2024", "12-09-2024", "13-09-2024"];
+  // const unavailableDates = ["10-09-2024", "12-09-2024", "13-09-2024"];
   // //: { [key: string]: string[] }定义一个类型来帮助 TypeScript 识别键的格式
   // const unavailableTimes: { [key: string]: string[] } = {
   //   "11-09-2024": ["10:00", "14:00", "15:00"],
