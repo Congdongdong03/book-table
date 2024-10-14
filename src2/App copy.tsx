@@ -27,6 +27,7 @@ const App = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   // 后端给我假数据
   // const unavailableDates = ["10-09-2024", "12-09-2024", "13-09-2024"];
+  // const unavailableDates = ["10-09-2024", "12-09-2024", "13-09-2024"];
   // //: { [key: string]: string[] }定义一个类型来帮助 TypeScript 识别键的格式
   // const unavailableTimes: { [key: string]: string[] } = {
   //   "11-09-2024": ["10:00", "14:00", "15:00"],
@@ -125,10 +126,8 @@ const App = () => {
     //   unavailableDates.includes(current.format("DD-MM-YYYY")),
     //   'unavailableDates.includes(current.format("DD-MM-YYYY"));'
     // );
-    if (unavailableDates && Array.isArray(unavailableDates)) {
-      return unavailableDates.includes(current.format("DD-MM-YYYY"));
-    }
-    return false
+
+    return unavailableDates.includes(current.format("DD-MM-YYYY"));
   };
 
   // 当日期变化时触发
@@ -166,8 +165,7 @@ const App = () => {
       // 调用后端 API 获取该日期的不可用时间段
       getUnavailableTimesForDate(selectedDateStr).then((res: { data: any }) => {
         const unavailable = res.data.unavailable_times || [];
-        console.log(res.data,'unavailable');
-        
+
         // 生成所有时间段（8:00, 10:00, 12:00, ..., 20:00）
         const allTimes = [
           "08:00",
@@ -183,7 +181,7 @@ const App = () => {
         const available = allTimes.filter(
           (time) => !unavailable.includes(time)
         );
-        console.log(available);
+
         // 更新可用时间段
         setAvailableTimes(available);
       });

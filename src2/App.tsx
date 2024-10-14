@@ -1,3 +1,4 @@
+// Import necessary components from Ant Design
 import {
   Button,
   Modal,
@@ -8,12 +9,12 @@ import {
   Space,
   Select,
 } from "antd";
-// Import the CSS styles
+// Import CSS styles
 import "./App.scss";
 import { useState } from "react";
-// Moment.js for time formatting
+// Import moment for date formatting and manipulation
 import moment, { Moment } from "moment";
-// Import the API functions
+// Import API functions
 import {
   makeReservation,
   getUnavailableDates,
@@ -22,35 +23,36 @@ import {
 
 const { Option } = Select;
 const App = () => {
-  // State variable to control Modal visibility
+  // State variable to control the visibility of the Modal
   const [isModalOpen, setIsModalOpen] = useState(false);
-  // State to store the selected date
+  // Store the user's selected date
   const [selectedDate, setSelectedDate] = useState<Moment | null>(null);
-  // State to store the selected time
+  // Store the user's selected time
   const [selectedTime, setSelectedTime] = useState<Moment | null>(null);
-  // State to store available time slots
+  // Store the available time slots
   const [availableTimes, setAvailableTimes] = useState<string[]>([]);
-  // State to store unavailable dates
+  // Store the unavailable dates fetched from the API
   const [unavailableDates, setUnavailableDates] = useState<string[]>([]);
 
-  // Function triggered when the 'showClick' button is clicked
+  // Function triggered when the "Book a table" button is clicked
   const showClick = () => {
-    // Clear the previous selections
+    // Clear previous selections
     setSelectedDate(null);
     setSelectedTime(null);
     console.log("showClick()");
-    // Display the Modal
+    // Show the Modal
     setIsModalOpen(true);
     // Fetch unavailable dates from the API
     getUnavailableDates().then((res: { data: any }) => {
       console.log(res, "getUnavailableDates");
       const { unavailable_dates } = res.data;
-      setUnavailableDates(unavailable_dates); // Store unavailable dates
+      setUnavailableDates(unavailable_dates); // Store the unavailable dates
     });
   };
 
-  // Function for the 'Ok' button inside the Modal
+  // Function triggered when the OK button in the Modal is clicked
   const handleOk = () => {
+    // Validation checks
     if (!selectedDate || !selectedTime) {
       message.warning("Please select both date and time!");
       return;
@@ -60,10 +62,10 @@ const App = () => {
     const selectedDateStr = selectedDate.format("DD-MM-YYYY");
     const selectedTimeStr = selectedTime.format("HH:mm");
     console.log(
-      `Sending the following date and time to the server: Date: ${selectedDateStr}, Time: ${selectedTimeStr}`
+      `Sending to backend: Date: ${selectedDateStr}, Time: ${selectedTimeStr}`
     );
 
-    // Call the makeReservation API function
+    // Call the makeReservation function to send data to the backend
     makeReservation(selectedDateStr, selectedTimeStr)
       .then((response: { data: any }) => {
         const data = response.data;
@@ -76,43 +78,38 @@ const App = () => {
       .catch(() => {
         message.error("Reservation failed. Please try again.");
       });
-
+    message.success("Reservation successful!");
     // Clear selections and close the Modal
     setSelectedDate(null);
     setSelectedTime(null);
     setIsModalOpen(false);
   };
 
-  // Function for the 'Cancel' button inside the Modal
+  // Function triggered when the Cancel button in the Modal is clicked
   const handleCancel = () => {
     console.log("handleCancel");
     setIsModalOpen(false);
   };
 
-  // Disable past dates and already booked dates
   const disabledDate = (current: Moment) => {
-    if (current && current < moment().endOf("day")) {
+    if (current && current.isBefore(moment().endOf("day"))) {
       return true;
     }
-    if (unavailableDates && Array.isArray(unavailableDates)) {
-      return unavailableDates.includes(current.format("DD-MM-YYYY"));
-    }
-    return false;
+    return unavailableDates.includes(current.format("DD-MM-YYYY"));
   };
 
-  // Triggered when the date is changed
+  // Triggered when the user selects a date
   const handleDateChange = (date: Moment | null) => {
     setSelectedDate(date);
 
     if (date) {
       const selectedDateStr = date.format("DD-MM-YYYY");
 
-      // Fetch unavailable times for the selected date from the API
+      // Fetch unavailable time slots for the selected date from the API
       getUnavailableTimesForDate(selectedDateStr).then((res: { data: any }) => {
         const unavailable = res.data.unavailable_times || [];
-        console.log(res.data, "unavailable");
 
-        // Generate available time slots
+        // Define all possible time slots (e.g., 8:00, 10:00, etc.)
         const allTimes = [
           "08:00",
           "10:00",
@@ -123,12 +120,12 @@ const App = () => {
           "20:00",
         ];
 
-        // Filter out unavailable times
+        // Filter out unavailable time slots
         const available = allTimes.filter(
           (time) => !unavailable.includes(time)
         );
-        console.log(available);
-        // Update available times
+
+        // Update available time slots
         setAvailableTimes(available);
       });
     } else {
@@ -136,7 +133,7 @@ const App = () => {
     }
   };
 
-  // Triggered when the time is changed
+  // Triggered when the user selects a time
   const handleTimeChange = (value: string) => {
     console.log("handleTimeChange");
     setSelectedTime(moment(value, "HH:mm")); // Convert the selected time to a Moment object
@@ -150,7 +147,7 @@ const App = () => {
       </header>
 
       <main className="main-content">
-        {/* Layout using Row and Col components */}
+        {/* Use Row and Col for layout */}
         <Row justify="center">
           <Col>
             <Button
@@ -174,7 +171,7 @@ const App = () => {
           onOk={handleOk}
           onCancel={handleCancel}
         >
-          {/* Use Space component to adjust the spacing between DatePicker and Select */}
+          {/* Use Space to adjust the spacing of the date and time pickers */}
           <Space direction="vertical" size="large" style={{ width: "100%" }}>
             <DatePicker
               disabledDate={disabledDate}
